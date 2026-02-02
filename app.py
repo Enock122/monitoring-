@@ -1022,5 +1022,4 @@ if __name__ == "__main__":
         db.create_all()  # This creates all tables defined in your models if they don't exist
 
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=True)
-
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
