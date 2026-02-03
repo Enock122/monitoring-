@@ -1,3 +1,10 @@
+import os
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL",
+    "sqlite:///instance/crop_health.db"
+)
+
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
@@ -25,6 +32,14 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import json
+from sqlalchemy.exc import OperationalError
+
+with app.app_context():
+    try:
+        db.create_all()
+        print("✅ Database tables verified/created")
+    except OperationalError as e:
+        print("❌ Database error:", e)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
