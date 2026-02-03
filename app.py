@@ -21,6 +21,14 @@ from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydb.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+try:
+    db.create_all()
+except OperationalError as e:
+    print("Database error:", e)
 with app.app_context():
     try:
         db.create_all()
