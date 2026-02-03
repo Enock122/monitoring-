@@ -1,4 +1,11 @@
 import os
+import os
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(INSTANCE_DIR, 'crop_health.db')}"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL",
@@ -123,6 +130,11 @@ class ContactMessage(db.Model):
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     replied = db.Column(db.Boolean, default=False)
+# ===============================
+# AUTO CREATE DATABASE TABLES
+# ===============================
+with app.app_context():
+    db.create_all()
 
 # Comprehensive crop disease database
 CROP_DISEASES = {
