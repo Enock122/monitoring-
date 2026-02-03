@@ -1,14 +1,14 @@
 /* Crop Health Monitoring System - Custom Styles */
 
 :root {
-    --primary-green: #f5e508;
-    --dark-green: #dae909;
+    --primary-green: #19854f;
+    --dark-green: #0be955;
     --light-green: #a8e6cf;
 }
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #e3e6e9;
+    background-color: #b8bb1f;
 }
 
 .navbar-brand {
