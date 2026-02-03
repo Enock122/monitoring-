@@ -13,7 +13,7 @@ plantvillage dataset/
 *.keras
 
 # Flask instance
-instance/
+#instance/
 
 # OS junk
 .DS_Store
