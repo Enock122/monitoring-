@@ -1,46 +1,26 @@
 import os
-import os
-
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
-os.makedirs(INSTANCE_DIR, exist_ok=True)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(INSTANCE_DIR, 'crop_health.db')}"
-
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///instance/crop_health.db"
-)
-
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from flask import Flask, request, jsonify
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
+import cv2
 import numpy as np
-import os
+from PIL import Image
+from datetime import datetime
+import json
+import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime
-import os
-import cv2
-import numpy as np
-from PIL import Image
+
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import json
-from sqlalchemy.exc import OperationalError
 
+
+app = Flask(__name__)
 with app.app_context():
     try:
         db.create_all()
@@ -48,21 +28,18 @@ with app.app_context():
     except OperationalError as e:
         print("❌ Database error:", e)
 
-app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///crop_health.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{os.path.join(INSTANCE_DIR, 'crop_health.db')}"
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-MODEL_PATH = "models/crop_disease_model.h5"
-import os
-import requests
-from tensorflow.keras.models import load_model
 
-# Make sure models folder exists
-model_dir = os.path.join(os.getcwd(), 'models')
-os.makedirs(model_dir, exist_ok=True)
-
-model_path = os.path.join(model_dir, 'crop_disease_model.h5')
-
+MODEL_PATH = os.path.join(INSTANCE_DIR, "crop_disease_model.h5")
 # Download the model if missing
 if not os.path.exists(model_path):
     print("Downloading model from GitHub Release...")
@@ -75,7 +52,6 @@ if not os.path.exists(model_path):
     print("Model downloaded successfully!")
 
 # Load the model
-model = load_model(model_path)
 print("Model loaded successfully!")
 
 try:
@@ -1044,9 +1020,8 @@ def get_crop_diseases(crop):
     return jsonify({'error': 'Crop not found'}), 404
 
 if __name__ == "__main__":
-    # Ensure tables are created before running the app
-    with app.app_context():
-        db.create_all()  # This creates all tables defined in your models if they don't exist
+ # This creates all tables defined in your models if they don't exist
 
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
