@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -19,23 +20,10 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
-
+# ================================
+# FLASK APP CONFIG
+# ================================
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydb.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-try:
-    db.create_all()
-except OperationalError as e:
-    print("Database error:", e)
-with app.app_context():
-    try:
-        db.create_all()
-        print("✅ Database tables verified/created")
-    except OperationalError as e:
-        print("❌ Database error:", e)
-
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
@@ -46,43 +34,17 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     f"sqlite:///{os.path.join(INSTANCE_DIR, 'crop_health.db')}"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static/uploads')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-MODEL_PATH = os.path.join(INSTANCE_DIR, "crop_disease_model.h5")
-# Download the model if missing
-if not os.path.exists(model_path):
-    print("Downloading model from GitHub Release...")
-    url = "https://github.com/Enock122/Crop_health/releases/download/v1.0/crop_disease_model.h5"
-    r = requests.get(url, stream=True)
-    r.raise_for_status()
-    with open(model_path, "wb") as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            f.write(chunk)
-    print("Model downloaded successfully!")
-
-# Load the model
-print("Model loaded successfully!")
-
-try:
-    model = load_model(MODEL_PATH)
-    print("✅ ML model loaded successfully")
-except Exception as e:
-    print("❌ Failed to load model:", e)
-    model = None
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Email configuration - UPDATE THESE WITH YOUR EMAIL SETTINGS
-EMAIL_ADDRESS = "your-email@gmail.com"  # Change this to your email
-EMAIL_PASSWORD = "your-app-password"    # Change this to your app password
-ADMIN_EMAIL = "your-admin-email@gmail.com"  # Where contact form messages go
-
-db = SQLAlchemy(app)
-
-# Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'history'), exist_ok=True)
 
-# Database Models
+db = SQLAlchemy(app)
+
+# ================================
+# DATABASE MODELS
+# ================================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -114,12 +76,40 @@ class ContactMessage(db.Model):
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     replied = db.Column(db.Boolean, default=False)
-# ===============================
-# AUTO CREATE DATABASE TABLES
-# ===============================
-with app.app_context():
-    db.create_all()
 
+# ================================
+# CREATE TABLES IF NOT EXISTS
+# ================================
+with app.app_context():
+    try:
+        db.create_all()
+        print("✅ Database tables verified/created")
+    except OperationalError as e:
+        print("❌ Database error:", e)
+
+# ================================
+# ML MODEL
+# ================================
+MODEL_PATH = os.path.join(INSTANCE_DIR, "crop_disease_model.h5")
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model from GitHub Release...")
+    url = "https://github.com/Enock122/Crop_health/releases/download/v1.0/crop_disease_model.h5"
+    r = requests.get(url, stream=True)
+    r.raise_for_status()
+    with open(MODEL_PATH, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
+    print("✅ Model downloaded successfully!")
+
+try:
+    model = load_model(MODEL_PATH)
+    print("✅ ML model loaded successfully")
+except Exception as e:
+    print("❌ Failed to load model:", e)
+    model = None
+#EMAIL_ADDRESS = "your-email@gmail.com"
+EMAIL_PASSWORD = "your-app-password"
+ADMIN_EMAIL = "your-admin-email@gmail.com"
 # Comprehensive crop disease database
 CROP_DISEASES = {
     'Tomato': {
@@ -1028,8 +1018,6 @@ def get_crop_diseases(crop):
     return jsonify({'error': 'Crop not found'}), 404
 
 if __name__ == "__main__":
- # This creates all tables defined in your models if they don't exist
-
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(host="0.0.0.0", port=port)
 
